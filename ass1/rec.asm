@@ -2,12 +2,21 @@
 rec START 0
     .inicializacija stacka
     JSUB sinit
-    .JSUB minit
+    JSUB ninit
 
-    LDA #42
-
+loop LDA #0
+    JSUB beri
+    
+brdone RMO B, A
+    COMP #0
+    JEQ loop
     JSUB fib
     STA result
+
+    JSUB resset
+done LDA #0xA
+    WD #1
+    J loop
 
 halt J halt
 
@@ -76,6 +85,60 @@ fibEx JSUB spop
     STA memo, X
 skip3 RSUB
 
+.RUTINA ZA BRANJE
+beri TD #0xAA
+    RD #0xAA
+    COMP #0xA
+    JEQ brdone
+    COMP #0xD
+    JEQ brdone
+    COMP #0
+    JEQ halt
+
+    SUB #48
+    RMO A, B
+
+brloop TD #0xAA
+    RD #0xAA
+    COMP #0xA
+    JEQ brdone
+    COMP #0xD
+    JEQ brdone
+    SUB #48
+    RMO A, S
+    RMO B, A
+    MUL #10
+    ADDR S, A
+    RMO A, B
+    J brloop
+
+
+.RUTINA ZA PISANJE
+.prebere stevilo iz result in jo da po stevkah na sklad
+resset LDA result
+    COMP #0
+    JEQ pisi
+    DIV #10
+    MUL #10
+    RMO A, B
+    LDA result
+    SUBR B, A
+    STA @nump
+    JSUB npush
+    LDA result
+    DIV #10
+    STA result
+    J resset
+
+pisi JSUB npop
+    LDA @nump
+    ADD #48
+    WD #1
+    LDA nump
+    COMP #nums
+    JEQ done
+    J pisi
+
 .RUTINE ZA SKLAD
 .inicializacija
 sinit STA temp
@@ -100,17 +163,38 @@ spop STA temp
     LDA temp
     RSUB
 
-.RUTINE ZA MEMOIZACIJO
-.minit STA temp
-    .LDA #memo
-    .STA memop
-    .LDA temp
-    .RSUB
+.RUTINE ZA SKLAD STEVK
+.inicializacija
+ninit STA temp
+    LDA #nums
+    STA nump
+    LDA temp
+    RSUB
+
+.poveca nump za 3
+npush STA temp
+    LDA nump
+    ADD #3
+    STA nump
+    LDA temp
+    RSUB
+
+.zmanjsa nump za 3
+npop STA temp
+    LDA nump
+    SUB #3
+    STA nump
+    LDA temp
+    RSUB
 
 .PODATKI ZA SKLAD
 stkp WORD 0 .stack pointer
 temp RESW 1 .temp za odlaganje vrednosti registrov
-stk RESW 1000
+stk RESW 500
+
+.PODATKI ZA SKLAD STEVK
+nump WORD 0
+nums RESW 20
 
 .OSTALI PODATKI
 x1 RESW 1
