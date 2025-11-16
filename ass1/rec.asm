@@ -35,7 +35,7 @@ fib STL @stkp
     JSUB fib
 
     .F(A-2)
-skip1 RMO B, A . A >> B
+skip1 RMO B, A
     SUB #2
     MUL #3
     RMO A, X
@@ -63,16 +63,18 @@ skip2 RMO B, A
     STT memo, X
 
 
-
 fibEx JSUB spop
     LDB @stkp
     JSUB spop
     LDL @stkp
-    MUL #3
-    RMO A, X
+
+    LDA memo, X
+    COMP #0
+    JGT skip3
+
     LDA #1
     STA memo, X
-    RSUB
+skip3 RSUB
 
 .RUTINE ZA SKLAD
 .inicializacija
