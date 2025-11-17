@@ -1,21 +1,22 @@
 .FIBONACCI
 rec START 0
-    .inicializacija stacka
+    .inicializacija stackov
     JSUB sinit
     JSUB ninit
 
+    .beremo dokler ne dobimo 0
 loop LDA #0
-    JSUB beri
+    JSUB beri .v A
     
 brdone RMO B, A
-    COMP #0
-    JEQ loop
-    JSUB fib
-    STA result
+    COMP #0 .preskočimo dvojne \n
+    JEQ loop 
+    JSUB fib .fib(A)
+    STA result .fib(A) -> result
 
-    JSUB resset
+    JSUB resset .result damo stevko po stevko na sklad
 done LDA #0xA
-    WD #1
+    WD #1 .\n
     J loop
 
 halt J halt
@@ -26,7 +27,7 @@ fib STL @stkp
     STB @stkp
     JSUB spush
 
-    COMP #2
+    COMP #2 
     JLT fibEx
     RMO A, B
 
@@ -57,6 +58,7 @@ skip1 RMO B, A
     JSUB fib
 
 skip2 RMO B, A
+    .shranimo memo[A-1] v S in memo[A-2] v T in sestejemo
     SUB #1
     MUL #3
     RMO A, X
@@ -66,6 +68,7 @@ skip2 RMO B, A
     LDT memo, X
     ADDR S, T .F(A) = T
 
+    .T shranimo v memo[A]
     RMO B, A
     MUL #3
     RMO A, X
@@ -77,6 +80,8 @@ fibEx JSUB spop
     JSUB spop
     LDL @stkp
 
+    .ce je memo[A] > 0, smo ga ze zapisali in ga nocemo overwritad z 1
+    .sicer je A == 0 ali A == 1 in je fib(A) == 1
     LDA memo, X
     COMP #0
     JGT skip3
@@ -88,23 +93,23 @@ skip3 RSUB
 .RUTINA ZA BRANJE
 beri TD #0xAA
     RD #0xAA
-    COMP #0xA
+    COMP #0xA .koncamo ce je \n
     JEQ brdone
-    COMP #0xD
+    COMP #0xD .koncamo ce je carriage return
     JEQ brdone
-    COMP #0
+    COMP #0 . koncam, ce je 1. znak 0
     JEQ halt
 
-    SUB #48
+    SUB #48 .odstejemo, da dobimo iz znaka stevilko
     RMO A, B
 
 brloop TD #0xAA
     RD #0xAA
-    COMP #0xA
+    COMP #0xA .koncamo ce je \n
     JEQ brdone
-    COMP #0xD
+    COMP #0xD .koncamo, ce je carriage return
     JEQ brdone
-    SUB #48
+    SUB #48 
     RMO A, S
     RMO B, A
     MUL #10
@@ -130,6 +135,7 @@ resset LDA result
     STA result
     J resset
 
+.iz sklada nums po vrsti izpisujemo cifre na stand. izhod
 pisi JSUB npop
     LDA @nump
     ADD #48
