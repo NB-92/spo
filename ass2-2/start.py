@@ -1,7 +1,8 @@
 
 import sys
+from machine import Machine
+
+m = Machine()
 
 fileName = sys.argv[1]
-
-print(a)
-code = open("geeks.txt", "r")
+m.readObjCode(fileName)
