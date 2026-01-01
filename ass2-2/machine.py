@@ -1,29 +1,36 @@
 
 import sys
 from typing import List
-from device import Device, InputDevice, OutputDevice
+from device import Device, InputDevice, OutputDevice, FileDevice
 
 MAX_ADDRESS = 2 ** 20  # naslovni prostor (20-bitov)
 
 class Machine:
 
     def __init__(self):
-        # registri
-        self.regs = [0] * 10 # [A, X, L, B, S, T, F, -, PC, SW]
-        self.regs[6] = 0.0 # register F
-
-        # pomnilink
+        # POMNILNIK
         self.memory = bytearray(MAX_ADDRESS)
 
-        # naprave
+        # REGISTRI
+        self.reset()
+
+        # NAPRAVE
+        # SIC/XE podpira 256 naprav
         self.devices: List[Device] = [None] * 256
-        self.devices[0] = InputDevice(stream=open(0, 'rb')) # standardni vhod (read byte)
-        self.devices[1] = OutputDevice(stream=open(1, 'wb')) # standardni izhod (write byte)
-        self.devices[2] = OutputDevice(stream=open(2, 'wb')) # standardni izhod za napake (write byte)
 
-        # disassembly
-        dissassembly = []
+        # Standardni vhod, izhod in izhod za napake
+        self.devices[0] = InputDevice(open(0, 'rb'))
+        self.devices[1] = OutputDevice(open(1, 'wb'))
+        self.devices[2] = OutputDevice(open(2, 'wb'))
 
+
+    def reset(self):
+        self.regs = [0] * 10 # [A, X, L, B, S, T, F, -, PC, SW]
+        # Za register SW nas zanimata le bita CC:
+        # 0x00 - manjse
+        # 0x40 - enako
+        # 0x80 - vecje
+        self.regs[6] = 0.0 # register F bo float
 
     # dostop do registrov
     def getA(self) -> int: return self.regs[0]
@@ -76,7 +83,7 @@ class Machine:
             return (self.memory[addr] << 16) | (self.memory[addr + 1] << 8) | (self.memory[addr + 2]);
         else: raise ValueError("Naslov izven meja.")
 
-    def getWord(self, addr, val):
+    def setWord(self, addr, val):
         if 0 <= addr < MAX_ADDRESS - 3:
             self.memory[addr] = (val >> 16) & 0xFF # ohrani samo spodnji Byte
             self.memory[addr + 1] = (val >> 8) & 0xFF
@@ -84,54 +91,15 @@ class Machine:
             return (self.memory[addr] << 16) | (self.memory[addr+1] << 8) | (self.memory[addr+2]);
         else: raise ValueError("Naslov izven meja.")
 
-    # dostop do naprav
-    def getDevice(self, num) -> Device:
-        if 0 <= num < 256:
-            return self.devices[num]
-        else: raise ValueError("Indeks naprave izven obsega.")
+    # DOSTOP DO NAPRAV
+    def getDevice(self, num: int) -> Device:
+        if not 0 <= num < 256:
+            raise ValueError("Device number must be 0-255")
+        return self.devices[num]
 
-    def setDevice(self, num, device):
-        if 0 <= num < 256:
-            self.devices[num] = device
-        else: raise ValueError("Indeks naprave izven obsega.")
-
-    # branje obj code
-    def readObjCode(self, fileName):
-        # read mode, po vrsticah
-        with open(fileName) as file:
-            lines = [line.strip() for line in file if line.strip()]
-
-        for line in lines:
-            record_type = line[0]
-            # HEADER
-            if record_type == "H":
-                name = line[1:7].strip()
-                start = int(line[8:13], 16) #hex to 10
-                #self.setPC(start)
-                length = int(line[13:19], 16)
-
-            # TEXT
-            elif record_type == "T":
-                t_start = int(line[1:7], 16)
-                t_len = int(line[7:9], 16)
-                t_data = line[9:]
-                # preostanek preberemo po bytih in shranimo v pomnilnik
-                for i in range(0, t_len, 2):
-                    byte = int(t_data[i:i+2], 16)
-                    self.setByte(t_start + i//2, byte)
-
-            # END
-            elif record_type == "E":
-                e_start = int(line[1:], 16)
-                self.setPC(e_start)
-
-        def step(self):
-            instr =
-
-        #file.read(1) # H
-        #name = file.read(6)
-        #start = file.read(6)
-        #self.setPC(start)
-
-
-
+    # Sets a FileDevice
+    # Doesn't allow overwriting of the standard devices
+    def set_device(self, num: int):
+        if not 2 < num < 256:
+            raise ValueError("Device number must be 3-255")
+        self.devices[num] = FileDevice(num);
