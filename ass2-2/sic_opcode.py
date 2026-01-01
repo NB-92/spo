@@ -1,5 +1,5 @@
 
-class OpCode:
+class Opcode:
     OPCODES = {
         0x00: ("LDA", 3),
         0x04: ("LDX", 3),
@@ -33,9 +33,23 @@ class OpCode:
         0x98: ("MULR", 2),
         0x9C: ("DIVR", 2),
         0xA0: ("COMPR", 2),
+        0xAC: ("RMO", 2),
+        0xAC: ("RMO", 2),
         0xB4: ("CLEAR", 2),
+        0xC0: ("FLOAT", 1),
+        0xC4: ("FIX", 1),
         0xD8: ("RD", 3),
         0xDC: ("WD", 3),
         0xE0: ("TD", 3),
         0xE8: ("STSW", 3)
     }
+
+    def get_format(self, opcode: int) -> int:
+        if opcode not in self.OPCODES:
+            return -1
+        return self.OPCODES[opcode][1]
+
+    def get_mnemonic(self, opcode: int) -> str:
+        if opcode not in self.OPCODES:
+            return ""
+        return self.OPCODES[opcode][0]
