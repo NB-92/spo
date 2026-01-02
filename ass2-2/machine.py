@@ -10,6 +10,8 @@ MAX_ADDRESS = 2 ** 20  # naslovni prostor (20-bitov)
 class Machine:
 
     def __init__(self):
+        self.running = False
+
         # POMNILNIK
         self.memory = bytearray(MAX_ADDRESS)
 
@@ -36,7 +38,7 @@ class Machine:
         self.regs = [0] * 10 # [A, X, L, B, S, T, F, -, PC, SW]
         self.regs[6] = 0.0 # register F bo float
 
-    # dostop do registrov
+    # DOSTOP DO REGISTROV
     def get_a(self) -> int: return self.regs[0]
     def set_a(self, val): self.regs[0] = val
 
@@ -71,7 +73,7 @@ class Machine:
             self.regs[6] = float(val)
         else: self.regs[index] = val
 
-    #dostop do pomnilnika:
+    # DOSTOP DO POMNILNIKA
     def get_byte(self, addr):
         if 0 <= addr < MAX_ADDRESS:
             return self.memory[addr]
@@ -102,6 +104,22 @@ class Machine:
         else:
             self.invalid_addressing()
             raise ValueError(f"Naslov {addr} izven meja.")
+
+    # SAMODEJNO IZVAJANJE
+    def start(self):
+        self.running = True
+        try:
+            while self.running:
+                if not self.execute():
+                    self.stop()
+        except KeyboardInterrupt:
+            self.stop()
+
+    def stop(self):
+        self.running = False
+
+    def step(self):
+        return self.execute()
 
     # IZVAJALNIK
     # naloži in vrne en bajt iz naslova PC in poveča PC za 1

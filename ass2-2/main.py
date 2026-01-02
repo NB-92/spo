@@ -30,6 +30,16 @@ def main():
     
     print("Starting execution (Ctrl+C to stop) ...")
 
+    while True:
+        cmd = input("(s)tep, (r)un, (q)uit > ").lower()
+        if cmd == "s":
+            machine.step()
+            print(f"PC = {machine.get_pc():#06x}")
+        elif cmd == "r":
+            machine.start()
+        elif cmd == "q":
+            break
+
     try:
         while True:
             machine.execute()
