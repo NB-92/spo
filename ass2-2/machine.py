@@ -1,9 +1,9 @@
 
 import sys
-from enum import Enum
 from typing import List, Optional, Union
 from device import Device, InputDevice, OutputDevice, FileDevice
 from sic_opcode import Opcode
+from utils import Utils
 
 MAX_ADDRESS = 2 ** 20  # naslovni prostor (20-bitov)
 
@@ -87,7 +87,7 @@ class Machine:
             raise ValueError("Naslov izven meja.")
 
     def get_word(self, addr):
-        if 0 <= addr < MAX_ADDRESS - 3:
+        if 0 <= addr <= MAX_ADDRESS - 3:
             return (self.memory[addr] << 16) | (self.memory[addr + 1] << 8) | (self.memory[addr + 2])
         else:
             self.invalid_addressing()
@@ -101,7 +101,7 @@ class Machine:
             return (self.memory[addr] << 16) | (self.memory[addr+1] << 8) | (self.memory[addr+2])
         else:
             self.invalid_addressing()
-            raise ValueError("Naslov izven meja.")
+            raise ValueError(f"Naslov {addr} izven meja.")
 
     # IZVAJALNIK
     # naloži in vrne en bajt iz naslova PC in poveča PC za 1
@@ -118,16 +118,16 @@ class Machine:
         ni_bits = opcode_byte & 0x03 # n = bit1, i = bit0
         opcode = opcode_byte & 0xFC # zgornjih 6 bitov
 
-        format = opcode_obj.get_format(opcode)
-        if format == -1:
-            self.invalid_opcode()
+        sic_format = opcode_obj.get_format(opcode)
+        if sic_format == -1:
+            self.invalid_opcode(opcode)
             return False
-        elif format == 1:
+        elif sic_format == 1:
             self.execute_f1(opcode)
-        elif format == 2:
+        elif sic_format == 2:
             operand = self.fetch()
             self.execute_f2(opcode, operand)
-        elif format == 3:
+        elif sic_format == 3:
             byte2 = self.fetch()
             byte3 = self.fetch()
             operand = (byte2 << 8) | byte3
@@ -172,9 +172,6 @@ class Machine:
         return True
 
     def execute_f3f4(self, opcode: int, ni: int, operand: int) -> bool:
-        x_bit = (operand & 0x8000) >> 15
-        e_bit = (operand & 0x1000) >> 12
-
         opcode_obj = Opcode()
         mnemonic = opcode_obj.get_mnemonic(opcode)
 
@@ -182,74 +179,117 @@ class Machine:
             self.invalid_opcode(opcode)
             return False
 
-        if ni == 0:
-            # format SIC
-            return True
+        x_bit = (operand & 15) & 1
+        b_bit = (operand >> 14) & 1
+        p_bit = (operand >> 13) & 1
+        e_bit = (operand & 12) & 1
+        disp = operand & 0x0FFF
 
+        # FORMAT 4 (extended)
         if e_bit == 1:
-            # format 4
             byte4 = self.fetch()
-            addr = ((operand & 0x0FFF) << 8) | byte4
-        else:
-            # format 3
-            addr = operand & 0x0FFF
+            addr = (disp << 8) | byte4
 
-        if ni == 0x03:
-            # preprosto naslavljanje
+        # FORMAT 3
+        else:
+            if p_bit == 1:
+                # PC-relative
+                if disp & 0x800:
+                    disp -= 0x1000
+                addr = self.get_pc() + disp
+            elif b_bit == 1:
+                # base-relative
+                addr = self.get_b() + disp
+            else:
+                # Direct
+                addr = disp
+
+        if ni == 0x00:
+            # SIC compatibility (simple)
+            val = self.get_word(addr)
+        elif ni == 0x03:
+            # Simple addressing
             if x_bit == 1:
-                # indeksno naslavljanje
                 addr += self.get_x()
             val = self.get_word(addr)
-            return True
-        else:
+        elif ni == 0x02:
+            # Indirect
             if x_bit == 1:
                 self.invalid_addressing()
                 return False
-
-        if ni == 0x02:
-            # posredno naslavljanje
             ptr = self.get_word(addr)
             val = self.get_word(ptr)
         elif ni == 0x01:
-            # takojšnje naslavljanje
+            # Immediate
+            if x_bit == 1:
+                self.invalid_addressing()
+                return False
             val = addr
         else:
             self.invalid_addressing()
             return False
 
-        if mnemonic == "ADD": self.add(val)
-        elif mnemonic == "AND": self.sic_and(val)
-        elif mnemonic == "OR": self.sic_or(val)
-        elif mnemonic == "COMP": self.comp(val)
-        elif mnemonic == "DIV": self.div(val)
-        elif mnemonic == "J": self.jump(val)
-        elif mnemonic == "JEQ": self.jeq(val)
-        elif mnemonic == "JGT": self.jgt(val)
-        elif mnemonic == "JLT": self.jlt(val)
-        elif mnemonic == "JSUB": self.jsub(val)
-        elif mnemonic == "LDA": self.lda(val)
-        elif mnemonic == "LDB": self.ldb(val)
-        elif mnemonic == "LDL": self.ldl(val)
-        elif mnemonic == "LDS": self.lds(val)
-        elif mnemonic == "LDT": self.ldt(val)
-        elif mnemonic == "LDX": self.ldx(val)
-        elif mnemonic == "MUL": self.mul(val)
-        elif mnemonic == "RD": self.rd(val)
-        elif mnemonic == "RSUB": self.rsub(val)
-        elif mnemonic == "STA": self.sta(val)
-        elif mnemonic == "STB": self.stb(val)
-        elif mnemonic == "STL": self.stl(val)
-        elif mnemonic == "STS": self.sts(val)
-        elif mnemonic == "STSW": self.stsw(val)
-        elif mnemonic == "STT": self.stt(val)
-        elif mnemonic == "STX": self.stx(val)
-        elif mnemonic == "SUB": self.sub(val)
-        elif mnemonic == "TD": self.td(val)
-        elif mnemonic == "WD": self.wd(val)
+        if mnemonic == "ADD":
+            self.add(val)
+        elif mnemonic == "AND":
+            self.sic_and(val)
+        elif mnemonic == "OR":
+            self.sic_or(val)
+        elif mnemonic == "COMP":
+            self.comp(val)
+        elif mnemonic == "DIV":
+            self.div(val)
+        elif mnemonic == "J":
+            self.jump(addr)
+        elif mnemonic == "JEQ":
+            self.jeq(addr)
+        elif mnemonic == "JGT":
+            self.jgt(addr)
+        elif mnemonic == "JLT":
+            self.jlt(addr)
+        elif mnemonic == "JSUB":
+            self.jsub(addr)
+        elif mnemonic == "LDA":
+            self.lda(val)
+        elif mnemonic == "LDB":
+            self.ldb(val)
+        elif mnemonic == "LDL":
+            self.ldl(val)
+        elif mnemonic == "LDS":
+            self.lds(val)
+        elif mnemonic == "LDT":
+            self.ldt(val)
+        elif mnemonic == "LDX":
+            self.ldx(val)
+        elif mnemonic == "MUL":
+            self.mul(val)
+        elif mnemonic == "RD":
+            self.rd(val)
+        elif mnemonic == "RSUB":
+            self.rsub()
+        elif mnemonic == "STA":
+            self.sta(addr)
+        elif mnemonic == "STB":
+            self.stb(addr)
+        elif mnemonic == "STL":
+            self.stl(addr)
+        elif mnemonic == "STS":
+            self.sts(addr)
+        elif mnemonic == "STSW":
+            self.stsw(addr)
+        elif mnemonic == "STT":
+            self.stt(addr)
+        elif mnemonic == "STX":
+            self.stx(addr)
+        elif mnemonic == "SUB":
+            self.sub(val)
+        elif mnemonic == "TD":
+            self.td(val)
+        elif mnemonic == "WD":
+            self.wd(val)
         else:
             self.not_implemented(mnemonic)
             return False
-
         return True
 
     # FUNCTIONS - FORMAT 1
@@ -324,36 +364,33 @@ class Machine:
 
     def div(self, val):
         a = self.get_a()
-        self.set_a(a / val)
+        self.set_a(a // val)
 
-    def jump(self, val):
-        self.set_pc(val)
+    def jump(self, addr):
+        self.set_pc(addr)
 
-    def jeq(self, val):
+    def jeq(self, addr):
         if self.get_sw() == 0x40:
-            self.set_pc(val)
+            self.set_pc(addr)
 
-    def jgt(self, val):
+    def jgt(self, addr):
         if self.get_sw() == 0x80:
-            self.set_pc(val)
+            self.set_pc(addr)
 
-    def jlt(self, val):
+    def jlt(self, addr):
         if self.get_sw() == 0x00:
-            self.set_pc(val)
+            self.set_pc(addr)
 
-    def jsub(self, val):
+    def jsub(self, addr):
         pc_val = self.get_pc()
         self.set_l(pc_val)
-        self.set_sw(val)
+        self.set_pc(addr)
 
     def lda(self, val):
         self.set_a(val)
 
     def ldb(self, val):
         self.set_b(val)
-
-    def ldf(self, val):
-        self.set_f(val)
 
     def ldl(self, val):
         self.set_l(val)
@@ -376,41 +413,40 @@ class Machine:
         self.set_a(a | val)
 
     def rd(self, val):
-        a = self.get_a()
         self.set_a(self.devices[val].read())
 
-    def rsub(self, val):
+    def rsub(self):
         l = self.get_l()
         self.set_pc(l)
 
-    def sta(self, val):
+    def sta(self, addr):
         a = self.get_a()
-        self.set_word(val, a)
+        self.set_word(addr, a)
 
 
-    def stb(self, val):
+    def stb(self, addr):
         b = self.get_b()
-        self.set_word(val, b)
+        self.set_word(addr, b)
 
-    def stl(self, val):
+    def stl(self, addr):
         l = self.get_l()
-        self.set_word(val, l)
+        self.set_word(addr, l)
 
-    def sts(self, val):
+    def sts(self, addr):
         s = self.get_s()
-        self.set_word(val, s)
+        self.set_word(addr, s)
 
-    def stsw(self, val):
+    def stsw(self, addr):
         sw = self.get_sw()
-        self.set_word(val, sw)
+        self.set_word(addr, sw)
 
-    def stt(self, val):
+    def stt(self, addr):
         t = self.get_t()
-        self.set_word(val, t)
+        self.set_word(addr, t)
 
-    def stx(self, val):
+    def stx(self, addr):
         x = self.get_x()
-        self.set_word(val, x)
+        self.set_word(addr, x)
 
     def sub(self, val):
         a = self.get_a()
@@ -439,6 +475,43 @@ class Machine:
             raise ValueError("Device number must be 3-255")
         self.devices[num] = FileDevice(num)
 
+    # NALAGANJE
+    def load_section(self, reader):
+        start_addr = 0
+        exec_addr = 0
+
+        while True:
+            rec_type = reader.read(1)
+            if not rec_type:
+                print(self.memory)
+                break
+
+            if rec_type == 'H':
+                name = Utils.read_string(reader, 6)
+                start_addr = Utils.read_word(reader)
+                length = Utils.read_word(reader)
+                # konec vrstice
+                reader.readline()
+
+            elif rec_type == 'T':
+                addr = Utils.read_word(reader)
+                size = Utils.read_byte(reader)
+                for i in range(size):
+                    byte = Utils.read_byte(reader)
+                    self.set_byte(addr + i, byte)
+                reader.readline()
+
+            elif rec_type == 'E':
+                exec_addr = Utils.read_word(reader)
+                self.set_pc(exec_addr)
+                reader.readline()
+                return True
+
+            else:
+                raise ValueError(f"Unknown record type {rec_type}")
+
+        return False
+
     # ERROR HANDLING
     def not_implemented(self, mnemonic: str):
         msg = "[ERROR]" + mnemonic + " is not implemented.\n"
@@ -457,5 +530,10 @@ class Machine:
 
     def unknown_error(self):
         msg = "[ERROR]" + "Unknown error.\n"
+        for b in msg.encode('utf-8'):
+            self.devices[2].write(b)
+
+    def unexpected_eof(self):
+        msg = "[ERROR]" + "Unexpected EOF\n"
         for b in msg.encode('utf-8'):
             self.devices[2].write(b)
