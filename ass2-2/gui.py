@@ -1,52 +1,115 @@
+
 import tkinter as tk
 from tkinter import ttk
-
+import threading
+import time
 from machine import Machine
 
-print("GUI start")
+class MachineGUI:
 
-# ustvari window
-root = tk.Tk()
-root.title("SIC/XE Simulator")
-root.geometry("1200x800")
+    def __init__(self, root, machine: Machine):
+        self.root = root
+        self.machine = machine
+        self.running = False
+        self.exec_thread = None
 
-main_frame = ttk.Frame(root)
-main_frame.pack(side="left", fill="y", padx=10, pady=10)
+        root.title("SIC/XE Simulator")
 
-# REGISTRI
-# funkcija, ki refresha vse vrednosti registrov, in s tem tudi izpis
-def refreshAllRegisters():
-    entries["A"].set(str(m.getA()))
-    entries["X"].set(str(m.getX()))
-    entries["L"].set(str(m.getL()))
-    entries["B"].set(str(m.getB()))
-    entries["S"].set(str(m.getS()))
-    entries["T"].set(str(m.getT()))
-    entries["F"].set(str(m.getF()))
-    entries["PC"].set(str(m.getPC()))
-    entries["SW"].set(str(m.getSW()))
+        # REGISTRI
+        regs_frame = ttk.LabelFrame(root, text="Registers")
+        regs_frame.grid(column=0, row=0, padx=10, pady=10, sticky="n")
 
-regs = ["A", "X", "L", "B", "S", "T", "F", "-", "PC", "SW"]
-entries = {} # slovar ("register" : "label za register")
-for r in regs:
-    if r == "F":
-        entries[r] = tk.StringVar(value=str(m.getF()))
-    else:
-        entries[r] = tk.StringVar(value=str(0))
+        self.reg_labels = []
+        reg_names = ["A", "X", "L", "B", "S", "T", "F", "-", "PC", "SW"]
 
-# dejanski izpis registrov
-registers_frame = ttk.Frame(main_frame)
-registers_frame.grid(row=0, column=0, sticky="nw", padx=10)
-tk.Label(registers_frame, text="Registri:", font=("Helvetica", 12)).pack(anchor="w")
-for r in regs:
-    frame = ttk.Frame(registers_frame)
-    frame.pack(anchor="w")
+        for i, name in enumerate(reg_names):
+            # imena registrov
+            ttk.Label(regs_frame, text=name).grid(column=0, row=i, sticky="w")
+            # vrednost registrov
+            lbl = ttk.Label(regs_frame, width=12)
+            lbl.grid(column=1, row=i)
+            self.reg_labels.append(lbl)
 
-    tk.Label(frame, text=r, width=4).pack(side="left")
+        # POMNILNIK
+        self.mem_base = 0x000000
+        self.mem_size = 0x100 # 256 bajtov
 
-    value_label = tk.Label(frame, textvariable=entries[r], width=10, anchor="w")
-    value_label.pack(side="left")
+        mem_frame = ttk.LabelFrame(root, text="Memory")
+        mem_frame.grid(column=1, row=0, padx=10, pady=10)
 
-root.mainloop()
+        mem_btn_frame = ttk.Frame(mem_frame)
+        mem_btn_frame.pack(pady=5)
 
+        ttk.Button(mem_btn_frame, text="▲", width=5, command=self.mem_up).grid(row=0, column=0, padx=2)
+        ttk.Button(mem_btn_frame, text="▼", width=5, command=self.mem_down).grid(row=0, column=1, padx=2)
+        ttk.Button(mem_btn_frame, text="O", width=5, command=self.mem_start).grid(row=0, column=2, padx=2)
 
+        self.mem_text = tk.Text(mem_frame, width=60, height=16)
+        self.mem_text.pack()
+
+        # GUMBI
+        btn_frame = ttk.Frame(root)
+        btn_frame.grid(column=0, row=1, columnspan=2, pady=10)
+
+        ttk.Button(btn_frame, text="STEP", command=self.step).grid(row=0, column=0, padx=5)
+        ttk.Button(btn_frame, text="START", command=self.start).grid(row=0, column=1, padx=5)
+        ttk.Button(btn_frame, text="STOP", command=self.stop).grid(row=0, column=2, padx=5)
+
+        self.update()
+
+    # POSODOBITEV PRIKAZA
+    def update(self):
+        # registri
+        for i, lbl in enumerate(self.reg_labels):
+            val = self.machine.get_reg(i)
+            if i == 8: #PC
+                lbl.config(text=f"{val:#06x}")
+            else:
+                lbl.config(text=str(val))
+
+        # pomnilnik (prvih 256 bajtov)
+        self.mem_text.delete("1.0", tk.END)
+        start = self.mem_base
+        end = self.mem_base + self.mem_size
+        for addr in range(start, end, 16):
+            bytes_row = " ".join(f"{self.machine.get_byte(addr + i):02X}" for i in range(16))
+            self.mem_text.insert(tk.END, f"{addr:06x}: {bytes_row}\n")
+
+    # POMNILNIK
+    def mem_up(self):
+        self.mem_base = max(0, self.mem_base - self.mem_size)
+        self.update()
+
+    def mem_down(self):
+        max_addr = len(self.machine.memory) - self.mem_size
+        self.mem_base = min(max_addr, self.mem_base + self.mem_size)
+        self.update()
+
+    def mem_start(self):
+        self.mem_base = 0
+        self.update()
+
+    # UKAZI
+    def step(self):
+        self.machine.step()
+        self.update()
+
+    def start(self):
+        if self.running:
+            return
+        self.running = True
+        self.exec_thread = threading.Thread(target=self.run_loop, daemon=True)
+        self.exec_thread.start()
+
+    def stop(self):
+        self.running = False
+        self.machine.stop()
+
+    def run_loop(self):
+        while self.running:
+            ok = self.machine.execute()
+            if not ok:
+                self.running = False
+                break
+            self.root.after(0, self.update)
+            time.sleep(0.1) # hitrost izvajanja
