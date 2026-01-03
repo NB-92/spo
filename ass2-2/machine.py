@@ -130,13 +130,13 @@ class Machine:
 
     #dekodira ukaz in morebitne operande z naslova PC ter ga izvede
     def execute(self):
-        opcode_obj = Opcode()
+        op = Opcode()
 
         opcode_byte = self.fetch()
         ni_bits = opcode_byte & 0x03 # n = bit1, i = bit0
         opcode = opcode_byte & 0xFC # zgornjih 6 bitov
 
-        sic_format = opcode_obj.get_format(opcode)
+        sic_format = op.get_format(opcode)
         if sic_format == -1:
             self.invalid_opcode(opcode)
             return False
@@ -153,8 +153,8 @@ class Machine:
         return True
 
     def execute_f1(self, opcode: int) -> bool:
-        opcode_obj = Opcode()
-        mnemonic = opcode_obj.get_mnemonic(opcode)
+        op = Opcode()
+        mnemonic = op.get_mnemonic(opcode)
 
         if mnemonic == "":
             self.invalid_opcode(opcode)
@@ -171,8 +171,8 @@ class Machine:
         r2 = operand & 0x0F # spodnji 4 biti
         r1 = (operand >> 4) & 0xF # zgornji 4 biti
 
-        opcode_obj = Opcode()
-        mnemonic = opcode_obj.get_mnemonic(opcode)
+        op = Opcode()
+        mnemonic = op.get_mnemonic(opcode)
 
         if mnemonic == "":
             self.invalid_opcode(opcode)
@@ -190,8 +190,8 @@ class Machine:
         return True
 
     def execute_f3f4(self, opcode: int, ni: int, operand: int) -> bool:
-        opcode_obj = Opcode()
-        mnemonic = opcode_obj.get_mnemonic(opcode)
+        op = Opcode()
+        mnemonic = op.get_mnemonic(opcode)
 
         if mnemonic == "":
             self.invalid_opcode(opcode)
@@ -495,8 +495,6 @@ class Machine:
 
     # NALAGANJE
     def load_section(self, reader):
-        start_addr = 0
-        exec_addr = 0
 
         while True:
             rec_type = reader.read(1)
@@ -505,9 +503,9 @@ class Machine:
                 break
 
             if rec_type == 'H':
-                name = Utils.read_string(reader, 6)
-                start_addr = Utils.read_word(reader)
-                length = Utils.read_word(reader)
+                Utils.read_string(reader, 6) # name
+                Utils.read_word(reader) # start_addr
+                Utils.read_word(reader) # length
                 # konec vrstice
                 reader.readline()
 
@@ -555,3 +553,47 @@ class Machine:
         msg = "[ERROR]" + "Unexpected EOF\n"
         for b in msg.encode('utf-8'):
             self.devices[2].write(b)
+
+    # DISASSEMBLER
+    def disassemble(self, addr: int):
+        try:
+            opcode_byte = self.memory[addr]
+            opcode = opcode_byte & 0xFC
+
+            op = Opcode()
+            sic_format = op.get_format(opcode)
+            mnemonic = op.get_mnemonic(opcode)
+
+            if sic_format == -1:
+                return (-1, f"{addr:06X}: ??")
+
+            # FORMAT 1
+            if sic_format == 1:
+                return (1, f"{addr:06X}: {mnemonic}")
+
+            # FORMAT 2
+            if sic_format == 2:
+                byte2 = self.memory[addr+1]
+                r1 = (byte2 >> 4) & 0xF
+                r2 = byte2 & 0xF
+                return (2, f"{addr:06X}: {mnemonic} {r1}, {r2}")
+
+            # FORMAT 3/4
+            byte2 = self.memory[addr+1]
+            byte3 = self.memory[addr+2]
+
+            e = (byte2 >> 4) & 1
+            disp = ((byte2 & 0x0F) << 8) | byte3
+
+            if e:
+                # FORMAT 4
+                byte4 = self.memory[addr+3]
+                addr_val = (disp << 8) | byte4
+                return (4, f"{addr:06X}: +{mnemonic} {addr_val:05X}")
+            else:
+                # FORMAT 3
+                return (3, f"{addr:06X}: {mnemonic} {disp:03X}")
+
+        except Exception:
+            return (-1, f"{addr:06X}: <ERR>")
+

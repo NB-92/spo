@@ -55,6 +55,14 @@ class MachineGUI:
         ttk.Button(btn_frame, text="START", command=self.start).grid(row=0, column=1, padx=5)
         ttk.Button(btn_frame, text="STOP", command=self.stop).grid(row=0, column=2, padx=5)
 
+        # DISASSEMBLY
+        dis_frame = ttk.LabelFrame(root, text="Disassembly")
+        dis_frame.grid(column=2, row=0, padx=10, pady=10, sticky="n")
+
+        self.dis_text = tk.Text(dis_frame, width=40, height=20)
+        self.dis_text.tag_configure("current_pc", background="light blue")
+        self.dis_text.pack()
+
         self.update()
 
     # POSODOBITEV PRIKAZA
@@ -74,6 +82,20 @@ class MachineGUI:
         for addr in range(start, end, 16):
             bytes_row = " ".join(f"{self.machine.get_byte(addr + i):02X}" for i in range(16))
             self.mem_text.insert(tk.END, f"{addr:06x}: {bytes_row}\n")
+
+        # disassebly
+        self.dis_text.delete("1.0", tk.END)
+
+        pc = self.machine.get_pc()
+        addr = pc
+
+        for _ in range(15): # pokazi 15 ukazov
+            size, text = self.machine.disassemble(addr)
+            if addr == pc:
+                self.dis_text.insert(tk.END, f" {text}\n", "current_pc")
+            else:
+                self.dis_text.insert(tk.END, f" {text}\n")
+            addr += size
 
     # POMNILNIK
     def mem_up(self):
