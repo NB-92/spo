@@ -3,8 +3,7 @@ from mnemonics.mnemonic import Mnemonic
 
 
 class InstructionF3(Node):
-    def __init__(self, mnemonic: Mnemonic, label: str, comment: str, operand):
+    def __init__(self, mnemonic: Mnemonic, operand=None):
         super().__init__(mnemonic)
         self.operand = operand
-        self.set_label(label)
-        self.set_comment(comment)
+

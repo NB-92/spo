@@ -6,29 +6,21 @@ from ass3.code.directive import Directive
 from mnemonics.mnemonic import Mnemonic
 
 
-# Directive with one numeric operand
+# Directive with one numeric operand: START, END
 class MnemonicDn(Mnemonic):
-    def __init__(self, mnemonic: str, opcode: int, hint: str, desc: str):
+    def __init__(self, mnemonic: str, opcode: int, hint: str, desc: str, num: int):
         Mnemonic.__init__(self, mnemonic, opcode, hint, desc)
+        self.num_operand = num
 
     @override
-    def parse(self) -> Node:
-        # number
-        tok = parser.lexer.token()
-        if tok.type == 'NUMBER':
-            return Directive(self, tok.value)
-        # symbol
-        elif tok.type == 'SYMBOL':
-            return Directive(self, tok.value)
-        # otherwise: error
-        else:
-            char = parser.lexer.peek()
-            raise SyntaxError(
-                f"Invalid character '{tok.value}'",
-                ("<string>", parser.lexer.lineno, parser.lexer.lexpos, "")
-            )
+    def parse(self, parsed_tuple) -> Node:
+        mnemonic, operands = parsed_tuple
+        if len(operands) > 1:
+            raise SyntaxError("Too many operands")
+        operand = operands[0] if operands else None
+        return Directive(mnemonic, operand)
 
     @override
     def operand_to_string(self, instruction: Node):
         i: Directive = instruction
-        return i.symbol if i.symbol != None else str(i.value)
+        return i.symbol if i.symbol is not None else str(i.value)

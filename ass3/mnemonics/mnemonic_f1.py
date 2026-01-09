@@ -1,14 +1,14 @@
 from typing import override
 
+from ass3.code.instruction_f1 import InstructionF1
 from ass3.code.node import Node
-from ass3.code.directive import Directive
 from mnemonics.mnemonic import Mnemonic
 
-# Directive without operands: NOBASE, LTORG
-class MnemonicD(Mnemonic):
+# ukazi formata 1 (brez operandov): FIX, FLOAT
+class MnemonicF1(Mnemonic):
     def __init__(self, mnemonic: str, opcode: int, hint: str, desc: str):
         Mnemonic.__init__(self, mnemonic, opcode, hint, desc)
 
     @override
     def parse(self, parsed_tuple) -> Node:
-        return Directive(self)
+        return InstructionF1(self)

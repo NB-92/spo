@@ -8,8 +8,10 @@ class Mnemonic:
         self.hint = hint
         self.desc = desc
 
-    def parse(self) -> Node:
-        return Node(None)
+    # prebere operande iz parserja
+    # vrne ukazni razred node ustreznega razreda
+    def parse(self, parsed_tuple) -> Node:
+        return None
 
     def to_string(self):
         return f"name:<6"
