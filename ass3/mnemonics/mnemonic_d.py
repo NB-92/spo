@@ -1,5 +1,7 @@
 from typing import override
 
+from ass3.code.node import Node
+from ass3.code.directive import Directive
 from mnemonics.mnemonic import Mnemonic
 
 # Directive without operands

@@ -2,6 +2,7 @@ from typing import override
 
 import parsing.parser as parser
 from ass3.code.node import Node
+from ass3.code.directive import Directive
 from mnemonics.mnemonic import Mnemonic
 
 
