@@ -5,7 +5,6 @@
 """
 from ass3.mnemonics.mnemonic import Mnemonic
 
-
 class Node:
     def __init__(self, mnemonic: Mnemonic):
         self.label: str = ""
@@ -25,7 +24,24 @@ class Node:
         self.comment = comment
 
     def to_string(self):
-        return self.mnemonic.to_string(self.mnemonic) + " " + self.operand_to_string()
+        return self.label + " " + self.mnemonic.to_string() + " " + self.operand_to_string() + " " + self.comment
 
     def operand_to_string(self):
-        return self.mnemonic.operand_to_string(self)
+        return ""
+
+    # poklicemo vsakic, ko med obhodom zacnemo in koncamo z obdelavo
+    # posamicnega vozlisca (Node)
+    def enter(self):
+        # code.loc = code.next_loc
+        # if self.length() < 0:
+        #     raise ValueError("Length of code must be >= 0")
+        # code.next_loc = code.next_loc + self.length()
+        pass
+
+    def leave(self):
+        # directive ORG
+        pass
+
+    # vrne dolzino v bajtih
+    def length(self) -> int:
+        return -1

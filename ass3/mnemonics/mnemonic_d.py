@@ -1,8 +1,8 @@
 from typing import override
 
-from ass3.code.node import Node
-from ass3.code.directive import Directive
-from mnemonics.mnemonic import Mnemonic
+from ..code.node import Node
+from ..code.directive import Directive
+from ..mnemonics.mnemonic import Mnemonic
 
 # Directive without operands: NOBASE, LTORG
 class MnemonicD(Mnemonic):
@@ -11,4 +11,8 @@ class MnemonicD(Mnemonic):
 
     @override
     def parse(self, parsed_tuple) -> Node:
-        return Directive(self)
+        label = parsed_tuple[0]
+        node = Directive(self)
+        if label:
+            node.set_label(label)
+        return node

@@ -1,17 +1,24 @@
 from typing import override
 
-from ass3.code.node import Node
-from ass3.code.storage import Storage
-from mnemonics.mnemonic import Mnemonic
+from ..code.node import Node
+from ..code.storage import Storage
+from ..mnemonics.mnemonic import Mnemonic
 
 # pomnilniŠka direktvia za rezervacijo: RESB, RESW
 class MnemonicSn(Mnemonic):
-    def __init__(self, mnemonic: str, opcode: int, hint: str, desc: str, value: int):
+    def __init__(self, mnemonic: str, opcode: int, hint: str, desc: str):
         Mnemonic.__init__(self, mnemonic, opcode, hint, desc)
-        self.value = value
 
     @override
-    def parse(self, parsed_tuple) -> Node:
-        mnemonic, operands = parsed_tuple
-        operand = operands[0] if operands else None
-        return Storage(mnemonic, operand)
+    def parse(self, line_token) -> Node:
+        label, [_, operands] = line_token
+        if len(operands) > 1:
+            raise SyntaxError("Too many operands")
+        elif len(operands) < 1:
+            raise SyntaxError("Missing operand")
+
+        operand = operands[0][0]
+        node = Storage(self, operand)
+        if label:
+            node.set_label(label)
+        return node

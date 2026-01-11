@@ -1,5 +1,4 @@
 from typing import override
-
 from node import Node
 
 class Comment(Node):
@@ -10,3 +9,7 @@ class Comment(Node):
     @override
     def to_string(self):
         return self.comment
+
+    # vrne dolzino v bajtih
+    def length(self) -> int:
+        return 0

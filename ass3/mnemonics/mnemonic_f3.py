@@ -2,7 +2,7 @@ from typing import override
 
 from ass3.code.node import Node
 from ass3.code.instruction_f3 import InstructionF3
-from mnemonics.mnemonic import Mnemonic
+from ..mnemonics.mnemonic import Mnemonic
 
 # ukazi formata 3 (brez operandov): RSUB
 class MnemonicF3(Mnemonic):
@@ -11,4 +11,8 @@ class MnemonicF3(Mnemonic):
 
     @override
     def parse(self, parsed_tuple) -> Node:
-        return InstructionF3(self)
+        label = parsed_tuple[0]
+        node = InstructionF3(self)
+        if label:
+            node.set_label(label)
+        return node

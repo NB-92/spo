@@ -1,8 +1,20 @@
+from typing import override
+
 from ass3.code.node import Node
-from mnemonics.mnemonic import Mnemonic
+from ..mnemonics.mnemonic import Mnemonic
 
 
 class InstructionF4(Node):
-    def __init__(self, mnemonic: Mnemonic, operand):
+    def __init__(self, mnemonic: Mnemonic, operand=None):
         super().__init__(mnemonic)
         self.operand = operand
+
+    # vrne dolzino v bajtih
+    def length(self) -> int:
+        return 4
+
+    @override
+    def operand_to_string(self) -> str:
+        if self.operand is not None:
+            return f"{self.operand}"
+        return ""

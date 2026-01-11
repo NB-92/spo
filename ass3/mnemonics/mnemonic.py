@@ -1,5 +1,3 @@
-from ass3.code.node import Node
-
 
 class Mnemonic:
     def __init__(self, name: str, opcode: int, hint: str, desc: str):
@@ -11,10 +9,10 @@ class Mnemonic:
     # prebere operande iz parserja
     # vrne ukazni razred node ustreznega razreda
     def parse(self, parsed_tuple) -> Node:
+        from ..code.node import Node
+
         return None
 
     def to_string(self):
-        return f"name:<6"
+        return f"  {self.name}"
 
-    def operand_to_string(self, instruction: Node):
-        return ""
