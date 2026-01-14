@@ -9,12 +9,14 @@ class InstructionF3(Node):
         super().__init__(mnemonic)
         self.operand = operand
 
-    # vrne dolzino v bajtih
-    def length(self) -> int:
-        return 3
+    def accept(self, visitor):
+        visitor.visit_instruction_f3(self)
 
     @override
     def operand_to_string(self) -> str:
         if self.operand is not None:
-            return f"{self.operand}"
+            if len(self.operand) > 1:
+                return f"{self.operand[0]}{str(self.operand[1])}"
+            else:
+                return f"{self.operand[0]}"
         return ""

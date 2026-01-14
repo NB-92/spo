@@ -13,6 +13,7 @@ class MnemonicF2r(Mnemonic):
     @override
     def parse(self, line_token) -> Node:
         label, [_, operands] = line_token
+
         if len(operands) > 1:
             raise SyntaxError("Too many operands")
         elif len(operands) < 1:
@@ -21,7 +22,7 @@ class MnemonicF2r(Mnemonic):
         operand: str = operands[0][0]
         if not isinstance(operand, str):
             raise SyntaxError("Invalid operand")
-        node = InstructionF2(self, operand)
+        node = InstructionF2(self, operand, 0)
         if label:
             node.set_label(label)
         return node

@@ -9,9 +9,8 @@ class Directive(Node):
         Node.__init__(self, mnemonic)
         self.operand = operand
 
-    # vrne dolzino v bajtih
-    def length(self) -> int:
-        return 0
+    def accept(self, visitor):
+        visitor.visit_directive(self)
 
     @override
     def operand_to_string(self) -> str:

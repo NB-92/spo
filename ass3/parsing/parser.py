@@ -3,6 +3,7 @@ from typing import List
 import ply.yacc
 import ply.lex
 
+from ..code.directive import Directive
 from ..code.code import Code
 from ..code.node import Node
 from ..mnemonics.mnemonic_sn import MnemonicSn
@@ -38,7 +39,7 @@ t_COMMA = r','
 t_HASH = r'\#'
 t_LABEL = r'^[a-z_0-9]+'
 t_REGISTER = r'\b[ABFLSTX]\b'
-t_MNEMONIC = r'\b[A-Z]+\b'
+t_MNEMONIC = r'\+?[A-Z]+'
 t_SYMBOL = r'[a-z_0-9]+'
 
 def t_NUMBER(t):
@@ -101,9 +102,9 @@ def parse_text(text):
     parser = ply.yacc.yacc()
 
     code_list: List[Node] = []
-
+    line_count = 0
     for line in text:
-
+        line_count += 1
         # skip empty lines and comments
         if not line.strip() or line.lstrip().startswith('.'):
             continue
@@ -119,6 +120,10 @@ def parse_text(text):
         #print(mnemonic_str + ": " + mnemonic_format + " " + str(mnemonic_opcode))
 
         # create the Mnemonic format:
+        if mnemonic_str == 'START':
+            if len(code_list) > 0:
+                raise SyntaxError(f"Error at {line_count}: START must precede all instructions.")
+
         if mnemonic_format == 'MnemonicD':
             mnemonic = MnemonicD(mnemonic_str, mnemonic_opcode, '', '')
         elif mnemonic_format == 'MnemonicDn':
@@ -144,16 +149,19 @@ def parse_text(text):
         elif mnemonic_format == 'MnemonicSn':
             mnemonic = MnemonicSn(mnemonic_str, mnemonic_opcode, '', '')
         else:
-            raise TypeError("Unknown mnemonic format: " + mnemonic_format)
+            raise TypeError(f"Error at {line_count}: Unknown mnemonic format: {mnemonic_format}.")
 
         # parse line_token and get node and attach node to parsed code
         node = mnemonic.parse(line_token)
         code_list.append(node)
-    first_node = code_list[0]
-    if not (first_node.mnemonic.name == "START"):
-        raise SyntaxError("Code must start with 'START'")
-    prog_name = first_node.label
-    prog_start = first_node.operand
+
+    start_node = code_list[0]
+    prog_name = 'null'
+    prog_start = 0
+    if start_node.mnemonic.name == 'START':
+        start_node: Directive
+        prog_name = start_node.get_label()
+        prog_start = start_node.operand
 
     code = Code(prog_name, prog_start, code_list)
     return code

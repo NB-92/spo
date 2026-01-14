@@ -19,6 +19,10 @@ class MnemonicsTable:
         'SHIFTL': ('MnemonicF2rn', 0xA4),
         'SHIFTR': ('MnemonicF2rn', 0xA8),
         'ADDR': ('MnemonicF2rr', 0x90),
+        'SUBR': ('MnemonicF2rr', 0x94),
+        'MULR': ('MnemonicF2rr', 0x98),
+        'DIVR': ('MnemonicF2rr', 0x9C),
+        'COMP': ('MnemonicF2n', 0x28),
 
         # format 3 / 4
         'ADD': ('MnemonicF3m', 0x18),
@@ -29,11 +33,18 @@ class MnemonicsTable:
         '+MUL': ('MnemonicF4m', 0x20),
         'DIV': ('MnemonicF3m', 0x24),
         '+DIV': ('MnemonicF4m', 0x24),
+        'JSUB': ('MnemonicF3m', 0x48),
 
         'LDA': ('MnemonicF3m', 0x00),
         '+LDA': ('MnemonicF4m', 0x00),
         'STA': ('MnemonicF3m', 0x0C),
         '+STA': ('MnemonicF4m', 0x0C),
+        'LDB': ('MnemonicF3m', 0x68),
+        '+LDB': ('MnemonicF4m', 0x68),
+        'STL': ('MnemonicF3m', 0x14),
+        '+STL': ('MnemonicF4m', 0x14),
+        'STB': ('MnemonicF3m', 0x78),
+        '+STB': ('MnemonicF4m', 0x78),
 
         'RSUB': ('MnemonicF3', 0x4C),
         'J': ('MnemonicF3m', 0x3C),

@@ -10,9 +10,8 @@ class InstructionF2(Node):
         self.op1 = op1
         self.op2 = op2
 
-    # vrne dolzino v bajtih
-    def length(self) -> int:
-        return 2
+    def accept(self, visitor):
+        visitor.visit_instruction_f2(self)
 
     @override
     def operand_to_string(self) -> str:

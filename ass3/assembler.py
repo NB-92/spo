@@ -1,4 +1,4 @@
-
+import os
 import sys
 
 from .code.code import Code
@@ -20,8 +20,27 @@ def main():
     print("Calling parser...")
     code: Code = parser.parse_text(code_text)
     code_text.close()
-    print("Code parsed.")
+    print("Code parsed.\n")
+
     #print(code.to_string())
+
+    print("Starting first pass...")
+    symbol_table = code.first_pass()
+    print("Symbol table: " + str(symbol_table))
+    print(code.get_header() + "\n")
+
+    print("Starting second pass...\n")
+    code.second_pass()
+
+    file_name = os.path.splitext(os.path.basename(code_file))[0]
+
+    with open(file_name + ".obj", "w") as f:
+        f.write(code.object_program)
+
+    with open(file_name + ".lst", "w") as f:
+        f.write(code.lst_to_string())
+
+    print("Finished successfully.")
 
 
 

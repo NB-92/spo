@@ -17,10 +17,8 @@ class MnemonicF2n(Mnemonic):
         elif len(operands) < 1:
             raise SyntaxError("Missing operand")
 
-        operand: str = operands[0][0]
-        if not isinstance(operand, int):
-            raise SyntaxError("Invalid operand")
-        node = InstructionF2(self, operand)
+        operand = operands[0][0]
+        node = InstructionF2(self, operand, 0)
         if label:
             node.set_label(label)
         return node

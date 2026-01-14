@@ -17,7 +17,7 @@ class MnemonicF3m(Mnemonic):
         elif len(operands) < 1:
             raise SyntaxError("Missing operand")
 
-        operand: int = operands[0][0]
+        operand: int = operands[0]
         node = InstructionF3(self, operand)
         if label:
             node.set_label(label)
