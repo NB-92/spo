@@ -143,8 +143,6 @@ class SecondPassVisitor:
 
     def visit_instruction_f3(self, node: InstructionF3):
         # če je simbol v simbolni tabeli, operand nadomestimo z naslovom iz simbolne tabele.
-        # TODO: handle f3 instruction without operands
-
         loc_counter = self.intermediate_table[node]
         target_addr = self.resolve_operand(node.operand)
         opcode = self.resolve_opcode(node.operand, node.get_opcode()) if node.operand is not None else node.get_opcode()

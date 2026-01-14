@@ -12,7 +12,7 @@ class MnemonicF3(Mnemonic):
     @override
     def parse(self, parsed_tuple) -> Node:
         label = parsed_tuple[0]
-        node = InstructionF3(self)
+        node = InstructionF3(self, 0)
         if label:
             node.set_label(label)
         return node
